@@ -345,14 +345,17 @@ NSString const *CALLBACK_ASSOCIATED_ID = @"RCCNavigationController.CALLBACK_ASSO
         NSDictionary *navigatorStyle = [[NSDictionary alloc] initWithDictionary:actionParams copyItems:YES];
         NSMutableDictionary *mergedStyle = [NSMutableDictionary dictionaryWithDictionary:rccViewController.navigatorStyle];
         
+        
         // there are a few styles that we don't want to remember from our parent (they should be local)
         [mergedStyle setValuesForKeysWithDictionary:navigatorStyle];
-        navigatorStyle = mergedStyle;
         
-        rccViewController.navigatorStyle = navigatorStyle;
+        rccViewController.navigatorStyle = mergedStyle;
         
         [rccViewController setStyleOnInit];
-        [rccViewController updateStyle];
+        
+        if (viewController == self.topViewController) {
+          [rccViewController updateStyle];
+        }
       }
     }
   }
