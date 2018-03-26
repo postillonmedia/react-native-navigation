@@ -55,7 +55,7 @@
     return YES;
 }
 
-- (UIImage *)image:(UIImage*)image withColor:(UIColor *)color1 {
++ (UIImage *)image:(UIImage*)image withColor:(UIColor *)color1 {
     UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextTranslateCTM(context, 0, image.size.height);
