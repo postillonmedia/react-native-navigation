@@ -41,60 +41,60 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 + (UIViewController*)controllerWithLayout:(NSDictionary *)layout globalProps:(NSDictionary *)globalProps bridge:(RCTBridge *)bridge {
     UIViewController* controller = nil;
     if (!layout) return nil;
-
+    
     // get props
     if (!layout[@"props"]) return nil;
     if (![layout[@"props"] isKindOfClass:[NSDictionary class]]) return nil;
     NSDictionary *props = layout[@"props"];
-
+    
     // get children
     if (!layout[@"children"]) return nil;
     if (![layout[@"children"] isKindOfClass:[NSArray class]]) return nil;
     NSArray *children = layout[@"children"];
-
+    
     // create according to type
     NSString *type = layout[@"type"];
     if (!type) return nil;
-
+    
     // regular view controller
     if ([type isEqualToString:@"ViewControllerIOS"]) {
         controller = [[RCCViewController alloc] initWithProps:props children:children globalProps:globalProps bridge:bridge];
     }
-
+    
     // navigation controller
     if ([type isEqualToString:@"NavigationControllerIOS"]) {
         controller = [[RCCNavigationController alloc] initWithProps:props children:children globalProps:globalProps bridge:bridge];
     }
-
+    
     // tab bar controller
     if ([type isEqualToString:@"TabBarControllerIOS"]) {
         controller = [[RCCTabBarController alloc] initWithProps:props children:children globalProps:globalProps bridge:bridge];
     }
-
+    
     // side menu controller
     if ([type isEqualToString:@"DrawerControllerIOS"]) {
         NSString *drawerType = props[@"type"];
-
+        
         if ([drawerType isEqualToString:@"TheSideBar"]) {
-
+            
             controller = [[RCCTheSideBarManagerViewController alloc] initWithProps:props children:children globalProps:globalProps bridge:bridge];
         }
         else {
             controller = [[RCCDrawerController alloc] initWithProps:props children:children globalProps:globalProps bridge:bridge];
         }
     }
-
+    
     // register the controller if we have an id
     NSString *componentId = props[@"id"];
     if (controller && componentId) {
         [[RCCManager sharedInstance] registerController:controller componentId:componentId componentType:type];
-
+        
         if([controller isKindOfClass:[RCCViewController class]])
         {
             ((RCCViewController*)controller).controllerId = componentId;
         }
     }
-
+    
     // set background image at root level
     NSString *rootBackgroundImageName = props[@"style"][@"rootBackgroundImageName"];
     if (rootBackgroundImageName) {
@@ -102,18 +102,18 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
         UIImageView *imageView = [[UIImageView alloc] initWithImage:image];
         [controller.view insertSubview:imageView atIndex:0];
     }
-
+    
     return controller;
 }
 
 -(NSDictionary*)addCommandTypeAndTimestampIfExists:(NSDictionary*)globalProps passProps:(NSDictionary*)passProps {
     NSMutableDictionary *modifiedPassProps = [NSMutableDictionary dictionaryWithDictionary:passProps];
-
+    
     NSString *commandType = globalProps[GLOBAL_SCREEN_ACTION_COMMAND_TYPE];
     if (commandType) {
         modifiedPassProps[GLOBAL_SCREEN_ACTION_COMMAND_TYPE] = commandType;
     }
-
+    
     NSString *timestamp = globalProps[GLOBAL_SCREEN_ACTION_TIMESTAMP];
     if (timestamp) {
         modifiedPassProps[GLOBAL_SCREEN_ACTION_TIMESTAMP] = timestamp;
@@ -126,62 +126,62 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 - (instancetype)initWithProps:(NSDictionary *)props children:(NSArray *)children globalProps:(NSDictionary *)globalProps bridge:(RCTBridge *)bridge {
     NSString *component = props[@"component"];
     if (!component) return nil;
-
+    
     NSDictionary *passProps = props[@"passProps"];
     NSDictionary *navigatorStyle = props[@"style"];
-
+    
     NSMutableDictionary *mergedProps = [NSMutableDictionary dictionaryWithDictionary:globalProps];
     [mergedProps addEntriesFromDictionary:passProps];
-
+    
     RCTRootView *reactView = [[RCTRootView alloc] initWithBridge:bridge moduleName:component initialProperties:mergedProps];
     if (!reactView) return nil;
-
+    
     self = [super init];
     if (!self) return nil;
-
+    
     [self commonInit:reactView navigatorStyle:navigatorStyle props:props];
-
+    
     self.navigationController.interactivePopGestureRecognizer.delegate = self;
-
+    
     return self;
 }
 
 - (instancetype)initWithComponent:(NSString *)component passProps:(NSDictionary *)passProps navigatorStyle:(NSDictionary*)navigatorStyle globalProps:(NSDictionary *)globalProps bridge:(RCTBridge *)bridge {
     NSMutableDictionary *mergedProps = [NSMutableDictionary dictionaryWithDictionary:globalProps];
     [mergedProps addEntriesFromDictionary:passProps];
-
+    
     RCTRootView *reactView = [[RCTRootView alloc] initWithBridge:bridge moduleName:component initialProperties:mergedProps];
     if (!reactView) return nil;
-
+    
     self = [super init];
     if (!self) return nil;
-
+    
     NSDictionary *modifiedPassProps = [self addCommandTypeAndTimestampIfExists:globalProps passProps:passProps];
-
+    
     [self commonInit:reactView navigatorStyle:navigatorStyle props:modifiedPassProps];
-
+    
     return self;
 }
 
 - (void)commonInit:(RCTRootView*)reactView navigatorStyle:(NSDictionary*)navigatorStyle props:(NSDictionary*)props {
     self.view = reactView;
-
+    
     self.edgesForExtendedLayout = UIRectEdgeNone; // default
     self.automaticallyAdjustsScrollViewInsets = NO; // default
-
+    
     self.navigatorStyle = [NSMutableDictionary dictionaryWithDictionary:[[RCCManager sharedInstance] getAppStyle]];
     [self.navigatorStyle addEntriesFromDictionary:navigatorStyle];
-
-
+    
+    
     [self setStyleOnInit];
-
+    
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onRNReload) name:RCTJavaScriptWillStartLoadingNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onCancelReactTouches) name:RCCViewControllerCancelReactTouchesNotification object:nil];
-
+    
     self.commandType = props[GLOBAL_SCREEN_ACTION_COMMAND_TYPE];
     self.timestamp = props[GLOBAL_SCREEN_ACTION_TIMESTAMP];
-
-
+    
+    
     // In order to support 3rd party native ViewControllers, we support passing a class name as a prop named `ExternalNativeScreenClass`
     // In this case, we create an instance and add it as a child ViewController which preserves the VC lifecycle.
     // In case some props are necessary in the native ViewController, the ExternalNativeScreenProps can be used to pass them
@@ -206,11 +206,11 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 
 - (void)sendScreenChangedEvent:(NSString *)eventName {
     if ([self.view isKindOfClass:[RCTRootView class]]) {
-
+        
         RCTRootView *rootView = (RCTRootView *)self.view;
-
+        
         if (rootView.appProperties && rootView.appProperties[@"navigatorEventID"]) {
-
+            
             [[[RCCManager sharedInstance] getBridge].eventDispatcher sendAppEventWithName:rootView.appProperties[@"navigatorEventID"] body:@
              {
                  @"type": @"ScreenChangedEvent",
@@ -223,7 +223,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 - (void)sendGlobalScreenEvent:(NSString *)eventName endTimestampString:(NSString *)endTimestampStr shouldReset:(BOOL)shouldReset {
     if ([self.view isKindOfClass:[RCTRootView class]]){
         NSString *screenName = [((RCTRootView*)self.view) moduleName];
-
+        
         [[[RCCManager sharedInstance] getBridge].eventDispatcher sendAppEventWithName:eventName body:@
          {
              @"commandType": self.commandType ? self.commandType : @"",
@@ -231,7 +231,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
              @"startTime": self.timestamp ? self.timestamp : @"",
              @"endTime": endTimestampStr ? endTimestampStr : @""
          }];
-
+        
         if (shouldReset) {
             self.commandType = nil;
             self.timestamp = nil;
@@ -242,7 +242,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 
 -(BOOL)isDisappearTriggeredFromPop:(NSString *)eventName {
     NSArray *navigationViewControllers = self.navigationController.viewControllers;
-
+    
     if (navigationViewControllers.lastObject == self || [navigationViewControllers indexOfObject:self] == NSNotFound) {
         return YES;
     }
@@ -265,9 +265,9 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
         dispatch_async(dispatch_get_main_queue(), ^{
             [[(UIScrollView*)view delegate] scrollViewDidEndDecelerating:(id)view];
         });
-
+        
     }
-
+    
     [view.subviews enumerateObjectsUsingBlock:^(__kindof UIView * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         [self _traverseAndCall:obj];
     }];
@@ -277,7 +277,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     [super viewDidAppear:animated];
     [self sendGlobalScreenEvent:@"didAppear" endTimestampString:[self getTimestampString] shouldReset:YES];
     [self sendScreenChangedEvent:@"didAppear"];
-
+    
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -314,136 +314,136 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 -(void)setStyleOnAppearForViewController:(UIViewController*)viewController appeared:(BOOL)appeared {
     NSString *screenBackgroundColor = self.navigatorStyle[@"screenBackgroundColor"];
     if (screenBackgroundColor) {
-
+        
         UIColor *color = screenBackgroundColor != (id)[NSNull null] ? [RCTConvert UIColor:screenBackgroundColor] : nil;
         viewController.view.backgroundColor = color;
     }
-
+    
     NSString *screenBackgroundImageName = self.navigatorStyle[@"screenBackgroundImageName"];
     if (screenBackgroundImageName) {
-
+        
         UIImage *image = [UIImage imageNamed: screenBackgroundImageName];
         viewController.view.layer.contents = (__bridge id _Nullable)(image.CGImage);
     }
-
+    
     NSString *navBarBackgroundColor = self.navigatorStyle[@"navBarBackgroundColor"];
     if (navBarBackgroundColor) {
-
+        
         UIColor *color = navBarBackgroundColor != (id)[NSNull null] ? [RCTConvert UIColor:navBarBackgroundColor] : nil;
         viewController.navigationController.navigationBar.barTintColor = color;
-
+        
     } else {
         viewController.navigationController.navigationBar.barTintColor = nil;
     }
-
+    
     NSMutableDictionary *titleTextAttributes = [RCTHelpers textAttributesFromDictionary:self.navigatorStyle withPrefix:@"navBarText" baseFont:[UIFont boldSystemFontOfSize:17]];
     [self.navigationController.navigationBar setTitleTextAttributes:titleTextAttributes];
-
+    
     NSMutableDictionary *navButtonTextAttributes = [RCTHelpers textAttributesFromDictionary:self.navigatorStyle withPrefix:@"navBarButton"];
     NSMutableDictionary *leftNavButtonTextAttributes = [RCTHelpers textAttributesFromDictionary:self.navigatorStyle withPrefix:@"navBarLeftButton"];
     NSMutableDictionary *rightNavButtonTextAttributes = [RCTHelpers textAttributesFromDictionary:self.navigatorStyle withPrefix:@"navBarRightButton"];
-
+    
     if (
         navButtonTextAttributes.allKeys.count > 0 ||
         leftNavButtonTextAttributes.allKeys.count > 0 ||
         rightNavButtonTextAttributes.allKeys.count > 0
         ) {
-
+        
         for (UIBarButtonItem *item in viewController.navigationItem.leftBarButtonItems) {
             if (leftNavButtonTextAttributes.allKeys.count > 0) {
                 NSDictionary *previousAttributes = [item titleTextAttributesForState:UIControlStateNormal];
                 NSMutableDictionary *mergedAttributes;
-
+                
                 if (leftNavButtonTextAttributes.allKeys.count > 0) {
                     mergedAttributes = [leftNavButtonTextAttributes mutableCopy];
                 } else {
                     mergedAttributes = [navButtonTextAttributes mutableCopy];
                 }
-
+                
                 [mergedAttributes addEntriesFromDictionary:previousAttributes];
-
+                
                 [item setTitleTextAttributes:[mergedAttributes copy] forState:UIControlStateNormal];
                 [item setTitleTextAttributes:[mergedAttributes copy] forState:UIControlStateHighlighted];
             }
         }
-
+        
         for (UIBarButtonItem *item in viewController.navigationItem.rightBarButtonItems) {
             NSDictionary *previousAttributes = [item titleTextAttributesForState:UIControlStateNormal];
             NSMutableDictionary *mergedAttributes;
-
+            
             if (rightNavButtonTextAttributes.allKeys.count > 0) {
                 mergedAttributes = [rightNavButtonTextAttributes mutableCopy];
             } else {
                 mergedAttributes = [navButtonTextAttributes mutableCopy];
             }
-
+            
             [mergedAttributes addEntriesFromDictionary:previousAttributes];
-
+            
             [item setTitleTextAttributes:[mergedAttributes copy] forState:UIControlStateNormal];
             [item setTitleTextAttributes:[mergedAttributes copy] forState:UIControlStateHighlighted];
         }
-
+        
         // At the moment, this seems to be the only thing that gets the back button correctly
         [navButtonTextAttributes removeObjectForKey:NSForegroundColorAttributeName];
         [[UIBarButtonItem appearance] setTitleTextAttributes:navButtonTextAttributes forState:UIControlStateNormal];
         [[UIBarButtonItem appearance] setTitleTextAttributes:navButtonTextAttributes forState:UIControlStateHighlighted];
     }
-
+    
     NSString *navBarButtonColor = self.navigatorStyle[@"navBarButtonColor"];
     if (navBarButtonColor) {
-
+        
         UIColor *color = navBarButtonColor != (id)[NSNull null] ? [RCTConvert UIColor:navBarButtonColor] : nil;
         viewController.navigationController.navigationBar.tintColor = color;
-
+        
     } else {
         viewController.navigationController.navigationBar.tintColor = nil;
     }
-
+    
     BOOL topBarElevationShadowEnabled = self.navigatorStyle[@"topBarElevationShadowEnabled"] != (id)[NSNull null] ? [RCTConvert CGFloat:self.navigatorStyle[@"topBarElevationShadowEnabled"]] : NO;
-
+    
     if (topBarElevationShadowEnabled) {
         CGFloat shadowOpacity = self.navigatorStyle[@"topBarShadowOpacity"] != 0 ? [RCTConvert CGFloat:self.navigatorStyle[@"topBarShadowOpacity"]] : 0.2;
         CGFloat shadowOffset = self.navigatorStyle[@"topBarShadowOffset"] != 0 ? [RCTConvert CGFloat:self.navigatorStyle[@"topBarShadowOffset"]] : 3.0;
         CGFloat shadowRadius = self.navigatorStyle[@"topBarShadowRadius"] != 0 ? [RCTConvert CGFloat:self.navigatorStyle[@"topBarShadowRadius"]] : 2.0;
         UIColor *shadowColor = self.navigatorStyle[@"topBarShadowColor"] != (id)[NSNull null] ? [RCTConvert UIColor:self.navigatorStyle[@"topBarShadowColor"]] : UIColor.blackColor;
-
+        
         viewController.navigationController.navigationBar.layer.shadowOpacity = shadowOpacity;
         viewController.navigationController.navigationBar.layer.shadowColor = shadowColor.CGColor;
         viewController.navigationController.navigationBar.layer.shadowOffset = CGSizeMake(0, shadowOffset);
         viewController.navigationController.navigationBar.layer.shadowRadius = shadowRadius;
     }
-
+    
     BOOL viewControllerBasedStatusBar = false;
-
+    
     NSObject *viewControllerBasedStatusBarAppearance = [[NSBundle mainBundle] infoDictionary][@"UIViewControllerBasedStatusBarAppearance"];
     if (viewControllerBasedStatusBarAppearance && [viewControllerBasedStatusBarAppearance isKindOfClass:[NSNumber class]]) {
         viewControllerBasedStatusBar = [(NSNumber *)viewControllerBasedStatusBarAppearance boolValue];
     }
-
+    
     NSString *statusBarTextColorSchemeSingleScreen = self.navigatorStyle[@"statusBarTextColorSchemeSingleScreen"];
     NSString *statusBarTextColorScheme = self.navigatorStyle[@"statusBarTextColorScheme"];
     NSString *finalColorScheme = statusBarTextColorSchemeSingleScreen ? : statusBarTextColorScheme;
-
+    
     if (finalColorScheme && [finalColorScheme isEqualToString:@"light"]) {
-
+        
         if (!statusBarTextColorSchemeSingleScreen) {
             viewController.navigationController.navigationBar.barStyle = UIBarStyleBlack;
         }
-
+        
         self._statusBarTextColorSchemeLight = true;
         if (!viewControllerBasedStatusBarAppearance) {
             [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleLightContent];
         }
-
+        
         [viewController setNeedsStatusBarAppearanceUpdate];
-
+        
     } else {
         if (!statusBarTextColorSchemeSingleScreen) {
             viewController.navigationController.navigationBar.barStyle = UIBarStyleDefault;
         }
-
+        
         self._statusBarTextColorSchemeLight = false;
-
+        
         if (!viewControllerBasedStatusBarAppearance) {
             [[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleDefault];
         }
@@ -546,7 +546,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     if (viewController.navigationController.navigationBarHidden != navBarHiddenBool) {
         [viewController.navigationController setNavigationBarHidden:navBarHiddenBool animated:YES];
     }
-
+    
     NSNumber *navBarHideOnScroll = self.navigatorStyle[@"navBarHideOnScroll"];
     BOOL navBarHideOnScrollBool = navBarHideOnScroll ? [navBarHideOnScroll boolValue] : NO;
     if (navBarHideOnScrollBool) {
@@ -554,24 +554,24 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         viewController.navigationController.hidesBarsOnSwipe = NO;
     }
-
+    
     NSNumber *statusBarBlur = self.navigatorStyle[@"statusBarBlur"];
     BOOL statusBarBlurBool = statusBarBlur ? [statusBarBlur boolValue] : NO;
     if (statusBarBlurBool && ![viewController.view viewWithTag:BLUR_STATUS_TAG]) {
-
+        
         UIVisualEffectView *blur = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleLight]];
         blur.frame = [[UIApplication sharedApplication] statusBarFrame];
         blur.tag = BLUR_STATUS_TAG;
         [viewController.view insertSubview:blur atIndex:0];
     }
-
+    
     NSNumber *navBarBlur = self.navigatorStyle[@"navBarBlur"];
     BOOL navBarBlurBool = navBarBlur ? [navBarBlur boolValue] : NO;
     if (navBarBlurBool) {
-
+        
         if (![viewController.navigationController.navigationBar viewWithTag:BLUR_NAVBAR_TAG]) {
             [self storeOriginalNavBarImages];
-
+            
             [viewController.navigationController.navigationBar setBackgroundImage:[UIImage new] forBarMetrics:UIBarMetricsDefault];
             viewController.navigationController.navigationBar.shadowImage = [UIImage new];
             UIVisualEffectView *blur = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleLight]];
@@ -582,9 +582,9 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
             [viewController.navigationController.navigationBar insertSubview:blur atIndex:0];
             [viewController.navigationController.navigationBar sendSubviewToBack:blur];
         }
-
+        
     } else {
-
+        
         UIView *blur = [viewController.navigationController.navigationBar viewWithTag:BLUR_NAVBAR_TAG];
         if (blur) {
             [blur removeFromSuperview];
@@ -593,15 +593,15 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
             self.originalNavBarImages = nil;
         }
     }
-
+    
     NSNumber *navBarTransparent = self.navigatorStyle[@"navBarTransparent"];
     BOOL navBarTransparentBool = navBarTransparent ? [navBarTransparent boolValue] : NO;
-
+    
     void (^action)() = ^ {
         if (navBarTransparentBool) {
             if (![viewController.navigationController.navigationBar viewWithTag:TRANSPARENT_NAVBAR_TAG]) {
                 [self storeOriginalNavBarImages];
-
+                
                 [viewController.navigationController.navigationBar setBackgroundImage:[UIImage new] forBarMetrics:UIBarMetricsDefault];
                 viewController.navigationController.navigationBar.shadowImage = [UIImage new];
                 UIView *transparentView = [[UIView alloc] initWithFrame:CGRectZero];
@@ -618,22 +618,23 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
             }
         }
     };
-
+    
     if (!self.transitionCoordinator || self.transitionCoordinator.initiallyInteractive || !navBarTransparentBool || appeared) {
         action();
     } else {
         UIView* backgroundView = [self.navigationController.navigationBar valueForKey:@"backgroundView"];
         CGFloat originalAlpha = backgroundView.alpha;
         backgroundView.alpha = navBarTransparentBool ? 0.0 : 1.0;
-        [self.transitionCoordinator animateAlongsideTransition:nil completion:^(id<UIViewControllerTransitionCoordinatorContext>  _Nonnull context) {
+        [self.transitionCoordinator animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext>  _Nonnull context) {
             action();
+        } completion:^(id<UIViewControllerTransitionCoordinatorContext>  _Nonnull context) {
             backgroundView.alpha = originalAlpha;
         }];
     }
-
+    
     NSNumber *autoAdjustsScrollViewInsets = self.navigatorStyle[@"autoAdjustScrollViewInsets"];
     viewController.automaticallyAdjustsScrollViewInsets = autoAdjustsScrollViewInsets ? [autoAdjustsScrollViewInsets boolValue] : false;
-
+    
     NSNumber *navBarTranslucent = self.navigatorStyle[@"navBarTranslucent"];
     BOOL navBarTranslucentBool = navBarTranslucent ? [navBarTranslucent boolValue] : NO;
     if (navBarTranslucentBool || navBarBlurBool) {
@@ -641,11 +642,11 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         viewController.navigationController.navigationBar.translucent = NO;
     }
-
+    
     NSNumber *extendedLayoutIncludesOpaqueBars = self.navigatorStyle[@"extendedLayoutIncludesOpaqueBars"];
     BOOL extendedLayoutIncludesOpaqueBarsBool = extendedLayoutIncludesOpaqueBars ? [extendedLayoutIncludesOpaqueBars boolValue] : NO;
     viewController.extendedLayoutIncludesOpaqueBars = extendedLayoutIncludesOpaqueBarsBool;
-
+    
     NSNumber *drawUnderNavBar = self.navigatorStyle[@"drawUnderNavBar"];
     BOOL drawUnderNavBarBool = drawUnderNavBar ? [drawUnderNavBar boolValue] : NO;
     if (drawUnderNavBarBool) {
@@ -653,7 +654,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         viewController.edgesForExtendedLayout &= ~UIRectEdgeTop;
     }
-
+    
     NSNumber *drawUnderTabBar = self.navigatorStyle[@"drawUnderTabBar"];
     BOOL drawUnderTabBarBool = drawUnderTabBar ? [drawUnderTabBar boolValue] : NO;
     if (drawUnderTabBarBool) {
@@ -661,7 +662,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         viewController.edgesForExtendedLayout &= ~UIRectEdgeBottom;
     }
-
+    
     NSNumber *removeNavBarBorder = self.navigatorStyle[@"navBarNoBorder"];
     BOOL removeNavBarBorderBool = removeNavBarBorder ? [removeNavBarBorder boolValue] : NO;
     if (removeNavBarBorderBool) {
@@ -669,7 +670,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         self.navBarHairlineImageView.hidden = NO;
     }
-
+    
     //Bug fix: in case there is a interactivePopGestureRecognizer, it prevents react-native from getting touch events on the left screen area that the gesture handles
     //overriding the delegate of the gesture prevents this from happening while keeping the gesture intact (another option was to disable it completely by demand)
     if (self.navigationController.viewControllers.count > 1){
@@ -683,29 +684,25 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
             }
         }
     }
-
+    
     NSString *navBarCustomView = self.navigatorStyle[@"navBarCustomView"];
     if (navBarCustomView && ![self.navigationItem.titleView isKindOfClass:[RCCCustomTitleView class]]) {
         if ([self.view isKindOfClass:[RCTRootView class]]) {
-
+            
             RCTBridge *bridge = ((RCTRootView*)self.view).bridge;
-
+            
             NSDictionary *initialProps = self.navigatorStyle[@"navBarCustomViewInitialProps"];
             RCTRootView *reactView = [[RCTRootView alloc] initWithBridge:bridge moduleName:navBarCustomView initialProperties:initialProps];
-
+            
             RCCCustomTitleView *titleView = [[RCCCustomTitleView alloc] initWithFrame:self.navigationController.navigationBar.bounds
                                                                               subView:reactView
                                                                             alignment:self.navigatorStyle[@"navBarComponentAlignment"]];
-
+            
             self.navigationItem.titleView = titleView;
             self.navigationItem.titleView.backgroundColor = [UIColor clearColor];
             self.navigationItem.titleView.clipsToBounds = YES;
         }
     }
-
-    // [self processTitleView:viewController
-    //                  props:self.navigatorStyle
-    //                  style:self.navigatorStyle];
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_10_3
     if (@available(iOS 11.0, *)) {
@@ -738,9 +735,9 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
                                                                   subtitle:props[@"subtitle"]
                                                             titleImageData:props[@"titleImage"]
                                                              isSetSubtitle:isSetSubtitleBool];
-
+    
     [titleViewHelper setup:style];
-
+    
 }
 
 - (void) viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
@@ -763,12 +760,12 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
         originalNavBarImages[@"shadowImage"] = shadowImage;
     }
     self.originalNavBarImages = originalNavBarImages;
-
+    
 }
 
 -(void)setStyleOnDisappear {
     self.navBarHairlineImageView.hidden = NO;
-
+    
     if (self.navigationController != nil && self.navigationController.interactivePopGestureRecognizer != nil && self.originalInteractivePopGestureDelegate != nil)
     {
         self.navigationController.interactivePopGestureRecognizer.delegate = self.originalInteractivePopGestureDelegate;
@@ -785,7 +782,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         self._hidesBottomBarWhenPushed = NO;
     }
-
+    
     NSNumber *statusBarHideWithNavBar = self.navigatorStyle[@"statusBarHideWithNavBar"];
     BOOL statusBarHideWithNavBarBool = statusBarHideWithNavBar ? [statusBarHideWithNavBar boolValue] : NO;
     if (statusBarHideWithNavBarBool) {
@@ -793,7 +790,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         self._statusBarHideWithNavBar = NO;
     }
-
+    
     NSNumber *statusBarHidden = self.navigatorStyle[@"statusBarHidden"];
     BOOL statusBarHiddenBool = statusBarHidden ? [statusBarHidden boolValue] : NO;
     if (statusBarHiddenBool) {
@@ -801,7 +798,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     } else {
         self._statusBarHidden = NO;
     }
-
+    
     NSDictionary *preferredContentSize = self.navigatorStyle[@"preferredContentSize"];
     if (preferredContentSize) {
         NSNumber *width = preferredContentSize[@"width"];
@@ -821,7 +818,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
     if (self._statusBarHidden) {
         return YES;
     }
-
+    
     if (self._statusBarHideWithNavBar) {
         return self.navigationController.isNavigationBarHidden;
     } else {
@@ -864,7 +861,7 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
             if (obj != nil && [obj isKindOfClass:[UIViewController class]] && [obj conformsToProtocol:@protocol(RCCExternalViewControllerProtocol)]) {
                 ((id <RCCExternalViewControllerProtocol>)obj).controllerDelegate = self;
                 [obj setProps:props[@"externalNativeScreenProps"]];
-
+                
                 UIViewController *viewController = (UIViewController*)obj;
                 [self addChildViewController:viewController];
                 viewController.view.frame = self.view.bounds;
@@ -914,18 +911,18 @@ const NSInteger TRANSPARENT_NAVBAR_TAG = 78264803;
 
 - (NSString*) customNewRelicInteractionName {
     NSString *interactionName = nil;
-
+    
     if (self.view != nil && [self.view isKindOfClass:[RCTRootView class]]) {
         NSString *moduleName = ((RCTRootView*)self.view).moduleName;
         if(moduleName != nil) {
             interactionName = [NSString stringWithFormat:@"RCCViewController: %@", moduleName];
         }
     }
-
+    
     if (interactionName == nil) {
         interactionName = [NSString stringWithFormat:@"RCCViewController with title: %@", self.title];
     }
-
+    
     return interactionName;
 }
 

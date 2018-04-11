@@ -30,6 +30,7 @@ public class BottomTabs extends AHBottomNavigation {
         setStyle(AppStyle.appStyle);
         setFontFamily();
         setFontSize();
+        setTabsHideShadow();
     }
 
     public void addTabs(List<ScreenParams> params, OnTabSelectedListener onTabSelectedListener) {
@@ -156,5 +157,9 @@ public class BottomTabs extends AHBottomNavigation {
         if(AppStyle.appStyle.bottomTabSelectedFontSize != null &&  AppStyle.appStyle.bottomTabFontSize != null) {
             setTitleTextSizeInSp(AppStyle.appStyle.bottomTabSelectedFontSize, AppStyle.appStyle.bottomTabFontSize);
         }
+    }
+
+    private void setTabsHideShadow() {
+        setUseElevation(!AppStyle.appStyle.bottomTabsHideShadow);
     }
 }
