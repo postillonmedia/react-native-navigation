@@ -79,7 +79,7 @@ public class CollapseCalculator {
                         }
 
                         private Direction getScrollDirection(MotionEvent e1, MotionEvent e2) {
-                            if (e1.getRawY() == e2.getRawY()) {
+                            if (e1 == null || e2 == null || e1.getRawY() == e2.getRawY()) {
                                 return Direction.None;
                             }
                             return e1.getRawY() - e2.getRawY() > 0 ? Direction.Up : Direction.Down;
